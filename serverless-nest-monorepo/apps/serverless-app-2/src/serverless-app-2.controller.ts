@@ -5,7 +5,7 @@ import { ServerlessApp2Service } from './serverless-app-2.service';
 export class ServerlessApp2Controller {
   constructor(private readonly serverlessApp2Service: ServerlessApp2Service) {}
 
-  @Get()
+  @Get('/hello')
   getHello(): string {
     return this.serverlessApp2Service.getHello();
   }

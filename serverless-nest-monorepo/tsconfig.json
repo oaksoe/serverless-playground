@@ -10,6 +10,7 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
+    "esModuleInterop": true,
     "paths": {
       "@app/common": [
         "libs/common/src"

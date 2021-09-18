@@ -1,0 +1,29 @@
+service:
+  name: serverless-apis
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+functions:
+  app1:
+    handler: dist/apps/serverless-app-1/main.handler
+    events:
+      - http:
+          method: ANY
+          path: /app1/
+      - http:
+          method: ANY
+          path: '/app1/{proxy+}'
+  app2:
+    handler: dist/apps/serverless-app-2/main.handler
+    events:
+      - http:
+          method: ANY
+          path: /app2/
+      - http:
+          method: ANY
+          path: '/app2/{proxy+}'
