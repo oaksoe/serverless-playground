@@ -88,6 +88,13 @@ serverless offline
 ```
 - Go to `http://localhost:3000/dev/hello`. You will see `Hello World!`
 
+### Deploy
+- Now deploy to AWS Lambda
+```
+serverless deploy --region ap-southeast-1
+```
+- Go to `https://chqmh8azd9.execute-api.ap-southeast-1.amazonaws.com/dev/hello`. You will see `Hello World!`
+
 ### Optimizations
 When hello api function is invoked by serverless offline, it prompted the duration and billed duration
 ```
