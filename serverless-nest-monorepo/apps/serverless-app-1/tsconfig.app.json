@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "declaration": true,
-    "esModuleInterop": true,
+    "declaration": false,
     "outDir": "../../dist/apps/serverless-app-1"
   },
   "include": ["src/**/*"],
