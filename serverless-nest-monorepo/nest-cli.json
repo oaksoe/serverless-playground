@@ -1,0 +1,39 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/serverless-app-1/src",
+  "monorepo": true,
+  "root": "apps/serverless-app-1",
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "apps/serverless-app-1/tsconfig.app.json"
+  },
+  "projects": {
+    "serverless-app-1": {
+      "type": "application",
+      "root": "apps/serverless-app-1",
+      "entryFile": "main",
+      "sourceRoot": "apps/serverless-app-1/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/serverless-app-1/tsconfig.app.json"
+      }
+    },
+    "serverless-app-2": {
+      "type": "application",
+      "root": "apps/serverless-app-2",
+      "entryFile": "main",
+      "sourceRoot": "apps/serverless-app-2/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/serverless-app-2/tsconfig.app.json"
+      }
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    }
+  }
+}
