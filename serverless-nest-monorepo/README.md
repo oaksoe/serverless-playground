@@ -1,75 +1,152 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+### Monorepo Setup (Nest Way)
+- Create first nest app as usual
+```
+nest new serverless-app-1
+```
+- Convert to monorepo mode by generating 2nd app
+```
+nest generate app serverless-app-2
+```
+- folder structure inside will be like:
+```
+apps
+  serverless-app-1
+    src
+      app.controller.ts
+      app.module.ts
+      app.service.ts
+      main.ts
+    tsconfig.app.json
+  serverless-app-2
+    src
+      app.controller.ts
+      app.module.ts
+      app.service.ts
+      main.ts
+    tsconfig.app.json
+nest-cli.json
+package.json
+tsconfig.json
+.eslintrc.js
+```
+- Now, rename the root folder name and name inside `package.json` to `serverless-nest-monorepo`
 
-[travis-image]: https://api.travis-ci.org/nestjs/nest.svg?branch=master
-[travis-url]: https://travis-ci.org/nestjs/nest
-[linux-image]: https://img.shields.io/travis/nestjs/nest/master.svg?label=linux
-[linux-url]: https://travis-ci.org/nestjs/nest
-  
-  <p align="center">A progressive <a href="http://nodejs.org" target="blank">Node.js</a> framework for building efficient and scalable server-side applications, heavily inspired by <a href="https://angular.io" target="blank">Angular</a>.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/dm/@nestjs/core.svg" alt="NPM Downloads" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://api.travis-ci.org/nestjs/nest.svg?branch=master" alt="Travis" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://img.shields.io/travis/nestjs/nest/master.svg?label=linux" alt="Linux" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#5" alt="Coverage" /></a>
-<a href="https://gitter.im/nestjs/nestjs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge"><img src="https://badges.gitter.im/nestjs/nestjs.svg" alt="Gitter" /></a>
-<a href="https://opencollective.com/nest#backer"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec"><img src="https://img.shields.io/badge/Donate-PayPal-dc3d53.svg"/></a>
-  <a href="https://twitter.com/nestframework"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+### Shared library
+- For shared codes among the apps, you can create a library
+```
+nest generate library common
+```
+- Reference mapping to the library with be auto-generated in tsconfig.json with default `@app/`.
+```javascript
+// tsconfig.json
+{
+  "compilerOptions: {
+    "paths": {
+      "@app/common": [
+        "libs/common/src"
+      ],
+      "@app/common/*": [
+        "libs/common/src/*"
+      ]
+    }
+  }
+}
+```
+- Add some functions to the library
+```javascript
+// libs/common/src/common.service.ts
+import { Injectable } from '@nestjs/common';
 
-## Description
+@Injectable()
+export class CommonService {
+  getHello(serviceName: string) {
+    return `hello ${serviceName}`;
+  }
+}
+```
+- Now, use this function in the apps
+```javascript
+// serverless-app-1/src/app.module.ts
+import { CommonModule } from '@app/common';
+@Module({
+  imports: [CommonModule],
+  ...
+})
+export class AppModule {}
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+// serverless-app-1/src/app.service.ts
+import { Injectable } from '@nestjs/common';
+import { CommonService } from '@app/common';
 
-## Installation
+@Injectable()
+export class AppService {
+  constructor(private readonly commonService: CommonService) {}
 
-```bash
-$ npm install
+  getHello(): string {
+    return this.commonService.getHello('Serverless App 1');
+  }
+}
 ```
 
-## Running the app
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+### Run the apps
+Update port to `3001` in app 2 to avoid using same port in 2 apps
+```
+nest build serverless-app-1
+node dist/apps/serverless-app-1/main
+nest build serverless-app-2
+node dist/apps/serverless-app-2/main
 ```
 
-## Test
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+### Convert apps into serverless
+- Follow previous article and convert each app to serverless
+- Although monorepo mode builds the apps with its setting `webpack: true` in nest-cli.json, for serverless, will need to update certain webpack configuration, so add webpack.config.js file in the root directory. Make sure the following configuration in the file.
+```javascript
+// webpack.config.js
+...
+output: {
+        libraryTarget: 'commonjs2',
+      },
+...
 ```
+- Add serverless.yml file to the root directory.
+```yml
+service:
+  name: serverless-apis
 
-## Support
+plugins:
+  - serverless-offline
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+provider:
+  name: aws
+  runtime: nodejs12.x
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-  Nest is [MIT licensed](LICENSE).
+functions:
+  app1:
+    handler: dist/apps/serverless-app-1/main.handler
+    events:
+      - http:
+          method: ANY
+          path: /app1/
+      - http:
+          method: ANY
+          path: '/app1/{proxy+}'
+  app2:
+    handler: dist/apps/serverless-app-2/main.handler
+    events:
+      - http:
+          method: ANY
+          path: /app2/
+      - http:
+          method: ANY
+          path: '/app2/{proxy+}'
+```
+- Now, run the following commands to build
+```
+nest build serverless-app-1 && mv dist/main.js dist/apps/serverless-app-1
+nest build serverless-app-2 && mv dist/main.js dist/apps/serverless-app-2
+```
+- Run offline or deploy to AWS Lambda
+```
+serverless offline
+serverless deploy --region ap-southeast-1 
+```
