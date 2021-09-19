@@ -7,7 +7,7 @@ import { AppResolver } from './app.resolver';
     GraphQLModule.forRoot({
       typePaths: ['./**/*.graphql'],
       playground: {
-        endpoint: '/graphql',
+        endpoint: '/dev/graphql',
       },
     }),
   ],

@@ -1,75 +1,141 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+### Setup
+- Add GraphQL packages
+```
+nest new serverless-nest-gql
+yarn add @nestjs/graphql graphql apollo-server-express
+```
+- Update tsconfig.json
+```javascript
+{
+  "compilerOptions": {
+   ...
+    "skipLibCheck": true,
+    "esModuleInterop": true // for serverless
+  },
+  ...
+}
+```
+- Add/Update src files
+```javascript
+// app.graphql
+type Query {
+  hello: String!
+}
 
-[travis-image]: https://api.travis-ci.org/nestjs/nest.svg?branch=master
-[travis-url]: https://travis-ci.org/nestjs/nest
-[linux-image]: https://img.shields.io/travis/nestjs/nest/master.svg?label=linux
-[linux-url]: https://travis-ci.org/nestjs/nest
+// app.resolver.ts
+import { Query, Resolver } from '@nestjs/graphql';
+
+@Resolver()
+export class AppResolver {
+  @Query()
+  hello(): string {
+    return 'Hello World from GraphQL!';
+  }
+}
+
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { GraphQLModule } from '@nestjs/graphql';
+import { AppResolver } from './app.resolver';
+
+@Module({
+  imports: [
+    GraphQLModule.forRoot({
+      typePaths: ['./**/*.graphql'],
+      playground: {
+        endpoint: '/dev/graphql',    // /{stage}/graphql => for serverless, use /graphql for normal server
+      },
+    }),
+  ],
+  providers: [AppResolver],
+})
+export class AppModule {}
+```
+- run with `yarn start` and go to `http://localhost:3000/graphql`, try the query `{ hello }`
+
+### Compile with Webpack
+- add `webpack-node-externals` dev package 
+```
+yarn add webpack-node-externals --dev
+```
+- add `nodeExternals()` to externals setting, to ignore all modules in `node_modules` folder, otherwise, will have build errors from those modules
+```javascript
+// webpack.config.js
+const nodeExternals = require('webpack-node-externals');
+
+module.exports = (options, webpack) => {
+    const lazyImports = [
+      '@nestjs/microservices/microservices-module',
+      '@nestjs/websockets/socket-module',
+    ];
   
-  <p align="center">A progressive <a href="http://nodejs.org" target="blank">Node.js</a> framework for building efficient and scalable server-side applications, heavily inspired by <a href="https://angular.io" target="blank">Angular</a>.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/dm/@nestjs/core.svg" alt="NPM Downloads" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://api.travis-ci.org/nestjs/nest.svg?branch=master" alt="Travis" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://img.shields.io/travis/nestjs/nest/master.svg?label=linux" alt="Linux" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#5" alt="Coverage" /></a>
-<a href="https://gitter.im/nestjs/nestjs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge"><img src="https://badges.gitter.im/nestjs/nestjs.svg" alt="Gitter" /></a>
-<a href="https://opencollective.com/nest#backer"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec"><img src="https://img.shields.io/badge/Donate-PayPal-dc3d53.svg"/></a>
-  <a href="https://twitter.com/nestframework"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
-
-```bash
-$ npm install
+    return {
+      ...options,
+      externals: [nodeExternals()],
+      output: {
+        filename: 'main.js',
+        libraryTarget: 'commonjs2',
+      },
+      plugins: [
+        ...options.plugins,
+        new webpack.IgnorePlugin({
+          checkResource(resource) {
+            if (lazyImports.includes(resource)) {
+              try {
+                require.resolve(resource);
+              } catch (err) {
+                return true;
+              }
+            }
+            return false;
+          },
+        }),
+      ],
+    };
+  };
 ```
-
-## Running the app
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+- Now, build with webpack and run
 ```
-
-## Test
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+nest build --webpack
+node dist/main
 ```
+If all good here, we proceed to serverless part.
 
-## Support
+### Serverless
+- Add `main.ts` file (refer to the previous articles)
+- Add `serverless.yml`
+```yml
+service: serverless-nest-gql
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+plugins:
+  - serverless-offline
 
-## Stay in touch
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev                             
+  region: ap-southeast-1                 
+  memorySize: 256                        
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+functions:
+  main:
+    handler: dist/main.handler
+    events:
+      - http:
+          method: GET
+          cors: true
+          path: graphql
+      - http:
+          method: POST
+          cors: true
+          path: graphql
+```
+- Now, build with webpack, then run offline or deploy to AWS Lambda
+```
+nest build --webpack
+serverless offline (or) serverless deploy
+```
+- Go to localhost:3000/dev/graphql (or) https://j18k43cia6.execute-api.ap-southeast-1.amazonaws.com/dev/graphql
+- Playground will load and you can query `{ hello }` from there.
 
-## License
-
-  Nest is [MIT licensed](LICENSE).
+Note that playground will send introspection query every 2 seconds by default, which will incur charges by AWS Lambda, so you may want to increase polling interval in playground settings. `"schema.polling.interval": 20000000000,` for example.

@@ -1,0 +1,24 @@
+service: serverless-nest-gql
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev                             
+  region: ap-southeast-1                 
+  memorySize: 256                        
+
+functions:
+  main:
+    handler: dist/main.handler
+    events:
+      - http:
+          method: GET
+          cors: true
+          path: graphql
+      - http:
+          method: POST
+          cors: true
+          path: graphql
